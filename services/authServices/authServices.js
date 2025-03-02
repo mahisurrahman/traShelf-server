@@ -13,7 +13,7 @@ module.exports = {
       const {
         firstName,
         lastName,
-        gender,
+        phoneNumber,
         userRole,
         username,
         email,
@@ -30,7 +30,7 @@ module.exports = {
       const requiredFields = {
         firstName,
         lastName,
-        gender,
+        phoneNumber,
         userRole,
         username,
         email,
@@ -50,7 +50,7 @@ module.exports = {
           firstName VARCHAR(225) NOT NULL,
           lastName VARCHAR(225) NOT NULL,
           userImg VARCHAR(225) NOT NULL,
-          gender INT NOT NULL,
+          phoneNumber VARCHAR(225) NOT NULL,
           userRole INT NOT NULL,
           username VARCHAR(50) NOT NULL UNIQUE,
           email VARCHAR(100) NOT NULL UNIQUE,
@@ -83,7 +83,7 @@ module.exports = {
 
       // Insert user's data to the DB
       const insertQuery = `
-        INSERT INTO users (firstName, lastName, userRole, userImg, gender, username, email, password)
+        INSERT INTO users (firstName, lastName, userRole, userImg, phoneNumber, username, email, password)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
       const userImg = imageName;
@@ -93,7 +93,7 @@ module.exports = {
         data.body.lastName,
         data.body.userRole,
         userImg,
-        data.body.gender,
+        data.body.phoneNumber,
         data.body.username,
         data.body.email,
         hash,
