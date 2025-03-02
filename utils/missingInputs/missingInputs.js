@@ -1,4 +1,4 @@
-function missingInputs(field, fieldName) {
+export default function missingInputs(field, fieldName) {
     if (!field) {
       return {
         status: 422, // You can set a custom status code
@@ -9,5 +9,3 @@ function missingInputs(field, fieldName) {
     }
     return null;
   }
-
-  module.exports = missingInputs;
