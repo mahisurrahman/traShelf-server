@@ -41,8 +41,6 @@ module.exports = {
       return res.status(newError.status).json(newError);
     }
   },
-
-
   async deleteUserByIdControllers(req, res) {
     try {
       let response = await userServices.removeSingleUserService(

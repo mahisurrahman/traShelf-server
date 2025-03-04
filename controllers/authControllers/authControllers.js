@@ -13,7 +13,8 @@ const createErrorMessage = (message, data) => {
 module.exports = {
   async registerUserController(req, res) {
     try {
-      console.log(req.body, "body");
+      // console.log(req.body, "body");
+      // console.log(req.file, "file");
       let response = await authServices.registerUserService(req);
       return res.status(response.status).send(response);
     } catch (error) {

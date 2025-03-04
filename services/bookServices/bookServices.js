@@ -1,110 +1,128 @@
 const connectToDb = require("../../database/db");
-const { default: missingInputs } = require("../../utils/missingInputs/missingInputs");
+const {
+  default: missingInputs,
+} = require("../../utils/missingInputs/missingInputs");
 const queryAsync = require("../../utils/queryAysncFunction/queryAsync");
 const path = require("path");
 
 module.exports = {
   async insertBookService() {
     try {
-        const db = await connectToDb();
+      const db = await connectToDb();
 
-        const { bookTitle, bookSummary, bookPrice, amountOfPage, authorName, insertionUserId, takenUserId, queuedUserId, chargeForADay, categoryId } =
-          data.body;
-        let imageName = null;
-  
-        if (data.file && data.file.path) {
-          imageName = path.basename(data.file.path);
+      const {
+        bookTitle,
+        bookSummary,
+        bookPrice,
+        amountOfPage,
+        authorName,
+        chargeForADay,
+        insertionUserId,
+        categoryId,
+      } = data.body;
+      let bookImg = null;
+
+      if (data.file && data.file.path) {
+        bookImg = path.basename(data.file.path);
+      }
+
+      const requiredFields = {
+        bookTitle,
+        bookPrice,
+        amountOfPage,
+        authorName,
+        insertionUserId,
+        chargeForADay,
+        categoryId,
+      };
+
+      for (const [fieldName, fieldValue] of Object.entries(requiredFields)) {
+        const missing = missingInputs(fieldValue, fieldName);
+        if (missing) {
+          return missing;
         }
-  
-        const requiredFields = {
-          postTitle,
-          postSummary,
-          description,
-          userId,
-          categoryId,
-        };
-  
-        for (const [fieldName, fieldValue] of Object.entries(requiredFields)) {
-          const missing = missingInputs(fieldValue, fieldName);
-          if (missing) {
-            return missing;
-          }
-        }
-  
-        const createTableQuery = `
-            CREATE TABLE IF NOT EXISTS posts (
+      }
+
+      const createTableQuery = `
+            CREATE TABLE IF NOT EXISTS books (
               id INT AUTO_INCREMENT PRIMARY KEY,
-              postTitle VARCHAR(255) NOT NULL,
-              postSummary VARCHAR(1000) NOT NULL,
-              description TEXT NOT NULL,
-              postThumbnail VARCHAR(255) NOT NULL,
-              userId INT NOT NULL,
+              bookTitle VARCHAR(255) NOT NULL,
+              bookSummary VARCHAR(1000) DEFAULT NULL,
+              bookPrice DECIMAL(10, 2) NOT NULL,
+              amountOfPage INT NOT NULL,
+              authorName VARCHAR(255) NOT NULL,
+              chargeForADay INT NOT NULL,
+              bookThumbnail VARCHAR(255) NOT NULL,
+              insertionUserId INT NOT NULL,
               categoryId INT NOT NULL,
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               is_active BOOLEAN DEFAULT TRUE,
               is_deleted BOOLEAN DEFAULT FALSE,
-              FOREIGN KEY (userId) REFERENCES users(id),
+              FOREIGN KEY (insertionUserId) REFERENCES users(id),
               FOREIGN KEY (categoryId) REFERENCES categories(id)
             )`;
-        await queryAsync(db, createTableQuery);
-  
-        const checkPostsExistsQuery = "SELECT * FROM posts WHERE postTitle = ?";
-        const checkPostsExists = await queryAsync(db, checkPostsExistsQuery, [
-          data.body.postTitle,
-        ]);
-  
-        if (checkPostsExists.length > 0) {
-          db.end();
-          return {
-            status: 409,
-            error: false,
-            message: "Post Title Already Exists",
-            data: null,
-          };
-        }
-  
-        const insertQuery =
-          "INSERT INTO posts (postTitle, postSummary, description, postThumbnail, userId, categoryId) VALUES (?, ?, ?, ?, ?, ?)";
-  
-        const postThumbnail = imageName;
-        const values = [
-          data.body.postTitle,
-          data.body.postSummary,
-          data.body.description,
-          postThumbnail,
-          data.body.userId,
-          data.body.categoryId,
-        ];
-  
-        const insertResult = await queryAsync(db, insertQuery, values);
-  
-        if (!insertResult.insertId) {
-          return {
-            status: 400,
-            error: true,
-            message: "Failed to insert post",
-            data: null,
-          };
-        }
-  
-        const fetchPostsQuery = "SELECT * FROM posts WHERE id = ?";
-        const newPostsResults = await queryAsync(db, fetchPostsQuery, [
-          insertResult.insertId,
-        ]);
-  
-        const newPosts = newPostsResults[0];
+      await queryAsync(db, createTableQuery);
+
+      const checkBooksExistsQuery = "SELECT * FROM books WHERE bookTitle = ?";
+      const checkBooksExists = await queryAsync(db, checkBooksExistsQuery, [
+        data.body.bookTitle,
+      ]);
+
+      if (checkBooksExists.length > 0) {
+        db.end();
         return {
-          status: 201,
+          status: 409,
           error: false,
-          message: "Post created successfully",
-          data: newPosts,
+          message: "Book Title Already Exists",
+          data: null,
         };
+      }
+
+      const insertQuery =
+        "INSERT INTO books (bookTitle, bookSummary, bookPrice, amountOfPage, authorName, chargeForADay, bookThumbnail, insertionUserId, categoryId ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+      const bookThumbnail = bookImg;
+      const values = [
+        data.body.bookTitle,
+        data.body.bookSummary,
+        data.body.bookPrice,
+        data.body.amountOfPage,
+        data.body.authorName,
+        data.body.chargeForADay,
+        bookThumbnail,
+        data.body.insertionUserId,
+        data.body.categoryId,
+      ];
+
+      const insertResult = await queryAsync(db, insertQuery, values);
+
+      if (!insertResult.insertId) {
+        return {
+          status: 400,
+          error: true,
+          message: "Failed to insert the Book",
+          data: null,
+        };
+      }
+
+      const fetchBooksQuery = "SELECT * FROM books WHERE id = ?";
+      const newBooksResult = await queryAsync(db, fetchBooksQuery, [
+        insertResult.insertId,
+      ]);
+
+      const newBook = newBooksResult[0];
+      return {
+        status: 201,
+        error: false,
+        message: "Books created successfully",
+        data: newBook,
+      };
     } catch (error) {
       console.log(error, "Insert Book Service Failed");
       return {
         status: 500,
         error: true,
-        message: "Internal Server Error",
+        message: "Insert Book Service Error",
       };
     }
   },
