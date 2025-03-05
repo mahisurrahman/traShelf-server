@@ -1,24 +1,22 @@
 const connectToDb = require("../../database/db");
-const {
-  default: missingInputs,
-} = require("../../utils/missingInputs/missingInputs");
+const missingInputs = require("../../utils/missingInputs/missingInputs");
 const queryAsync = require("../../utils/queryAysncFunction/queryAsync");
 const path = require("path");
 
 module.exports = {
-  async insertBookService() {
+  async insertBookService(data) {
     try {
       const db = await connectToDb();
 
       const {
         bookTitle,
-        bookSummary,
         bookPrice,
         amountOfPage,
         authorName,
-        chargeForADay,
         insertionUserId,
         categoryId,
+        hourlyRate,
+        dailyRate,
       } = data.body;
       let bookImg = null;
 
@@ -32,8 +30,9 @@ module.exports = {
         amountOfPage,
         authorName,
         insertionUserId,
-        chargeForADay,
         categoryId,
+        hourlyRate,
+        dailyRate,
       };
 
       for (const [fieldName, fieldValue] of Object.entries(requiredFields)) {
@@ -51,16 +50,21 @@ module.exports = {
               bookPrice DECIMAL(10, 2) NOT NULL,
               amountOfPage INT NOT NULL,
               authorName VARCHAR(255) NOT NULL,
-              chargeForADay INT NOT NULL,
               bookThumbnail VARCHAR(255) NOT NULL,
               insertionUserId INT NOT NULL,
               categoryId INT NOT NULL,
+              hourlyRate INT NOT NULL, 
+              dailyRate INT NOT NULL,
+              available BOOLEAN DEFAULT TRUE,
+              reserved BOOLEAN DEFAULT FALSE,
+              borrowed BOOLEAN DEFAULT FALSE,
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               is_active BOOLEAN DEFAULT TRUE,
               is_deleted BOOLEAN DEFAULT FALSE,
               FOREIGN KEY (insertionUserId) REFERENCES users(id),
               FOREIGN KEY (categoryId) REFERENCES categories(id)
             )`;
+
       await queryAsync(db, createTableQuery);
 
       const checkBooksExistsQuery = "SELECT * FROM books WHERE bookTitle = ?";
@@ -78,8 +82,12 @@ module.exports = {
         };
       }
 
-      const insertQuery =
-        "INSERT INTO books (bookTitle, bookSummary, bookPrice, amountOfPage, authorName, chargeForADay, bookThumbnail, insertionUserId, categoryId ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      const insertQuery = `
+      INSERT INTO books (
+        bookTitle, bookSummary, bookPrice, amountOfPage, authorName, bookThumbnail, insertionUserId, categoryId, hourlyRate, 
+        dailyRate
+      ) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
       const bookThumbnail = bookImg;
       const values = [
@@ -88,10 +96,11 @@ module.exports = {
         data.body.bookPrice,
         data.body.amountOfPage,
         data.body.authorName,
-        data.body.chargeForADay,
         bookThumbnail,
         data.body.insertionUserId,
         data.body.categoryId,
+        data.body.hourlyRate,
+        data.body.dailyRate,
       ];
 
       const insertResult = await queryAsync(db, insertQuery, values);
@@ -248,17 +257,49 @@ module.exports = {
     }
   },
 
-  //   async updateBooksService(id){
-  //     try{
-  //         const db = await connectToDb();
-  //     }catch(error){
-  //         console.log(error, "Update Books Service Failed");
-  //         return {
-  //           status: 500,
-  //           error: true,
-  //           message: "Update Books Service Failed",
-  //           data: null,
-  //         };
-  //     }
-  //   }
+  async updateBookService(bookId, updateData) {
+    try {
+      const db = await connectToDb();
+      const { title, author, published_year, is_active } = updateData;
+
+      const q = `UPDATE books 
+                  SET title = ?, author = ?, published_year = ?, is_active = ? 
+                  WHERE id = ?`;
+
+      const results = await new Promise((resolve, reject) => {
+        db.query(
+          q,
+          [title, author, published_year, is_active, bookId],
+          (err, data) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(data);
+            }
+          }
+        );
+      });
+
+      if (results.affectedRows > 0) {
+        return {
+          status: 200,
+          error: false,
+          message: "Book updated successfully",
+        };
+      } else {
+        return {
+          status: 404,
+          error: true,
+          message: "Book not found or no changes made",
+        };
+      }
+    } catch (error) {
+      console.log(error, "Update Book Service Failed");
+      return {
+        status: 500,
+        error: true,
+        message: "Update Book Service Failed",
+      };
+    }
+  },
 };
