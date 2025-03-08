@@ -16,7 +16,6 @@ module.exports = {
         insertionUserId,
         categoryId,
         hourlyRate,
-        dailyRate,
       } = data.body;
       let bookImg = null;
 
@@ -32,7 +31,6 @@ module.exports = {
         insertionUserId,
         categoryId,
         hourlyRate,
-        dailyRate,
       };
 
       for (const [fieldName, fieldValue] of Object.entries(requiredFields)) {
@@ -54,7 +52,6 @@ module.exports = {
               insertionUserId INT NOT NULL,
               categoryId INT NOT NULL,
               hourlyRate INT NOT NULL, 
-              dailyRate INT NOT NULL,
               available BOOLEAN DEFAULT TRUE,
               reserved BOOLEAN DEFAULT FALSE,
               borrowed BOOLEAN DEFAULT FALSE,
@@ -84,10 +81,9 @@ module.exports = {
 
       const insertQuery = `
       INSERT INTO books (
-        bookTitle, bookSummary, bookPrice, amountOfPage, authorName, bookThumbnail, insertionUserId, categoryId, hourlyRate, 
-        dailyRate
+        bookTitle, bookSummary, bookPrice, amountOfPage, authorName, bookThumbnail, insertionUserId, categoryId, hourlyRate
       ) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
       const bookThumbnail = bookImg;
       const values = [
@@ -99,8 +95,7 @@ module.exports = {
         bookThumbnail,
         data.body.insertionUserId,
         data.body.categoryId,
-        data.body.hourlyRate,
-        data.body.dailyRate,
+        data.body.hourlyRate
       ];
 
       const insertResult = await queryAsync(db, insertQuery, values);

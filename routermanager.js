@@ -1,8 +1,9 @@
 const { app } = require("./app.js");
 const authRoutes = require("./routes/authRoutes/authRoutes.js");
 const userRoutes = require("./routes/userRoutes/userRoutes.js");
-const bookRoutes= require ("./routes/bookRoutes/bookRoutes.js");
-const categoryRoutes = require ("./routes/categoryRoutes/categoryRoutes.js");
+const bookRoutes = require("./routes/bookRoutes/bookRoutes.js");
+const categoryRoutes = require("./routes/categoryRoutes/categoryRoutes.js");
+const reservationRoutes = require("./routes/reservationRoutes/reservationRoutes.js");
 
 const routermanager = () => {
   //Auth Routes//
@@ -12,10 +13,13 @@ const routermanager = () => {
   app.use("/users", userRoutes);
 
   //Books Routes//
-  app.use ("/books", bookRoutes);
+  app.use("/books", bookRoutes);
 
   //Category Routes//
-  app.use ("/categories", categoryRoutes);
+  app.use("/categories", categoryRoutes);
+
+  //Reservation Routes//
+  app.use("/reservations", reservationRoutes);
 };
 
 module.exports = routermanager;
