@@ -7,14 +7,12 @@ module.exports = {
     try {
       const db = await connectToDb();
 
-      const { bookId, userId, reservedDuration, reservedDate, paidAmount } =
-        body;
+      const { bookId, userId, reservedDuration, paidAmount } = body;
 
       const requiredFields = {
         bookId,
         userId,
         reservedDuration,
-        reservedDate,
         paidAmount,
       };
 
@@ -25,8 +23,8 @@ module.exports = {
         }
       }
 
-      // Fetch hourlyRate and dailyRate from the books table
-      const bookQuery = "SELECT hourlyRate, dailyRate FROM books WHERE id = ?";
+      // Fetch hourlyRate from the books table
+      const bookQuery = "SELECT hourlyRate FROM books WHERE id = ?";
       const bookResult = await queryAsync(db, bookQuery, [bookId]);
 
       if (bookResult.length === 0) {
@@ -38,7 +36,10 @@ module.exports = {
         };
       }
 
-      const { hourlyRate, dailyRate } = bookResult[0];
+      const { hourlyRate } = bookResult[0];
+
+      const totalAmount = hourlyRate * reservedDuration;
+      const dueAmount = totalAmount - paidAmount;
 
       const createTableQuery = `
             CREATE TABLE IF NOT EXISTS reservations (
@@ -46,16 +47,17 @@ module.exports = {
               bookId INT NOT NULL,
               userId INT NOT NULL,
               chargePerHour INT NOT NULL,
-              chargePerDay INT NOT NULL,
               totalAmount INT NOT NULL,
               paidAmount INT NOT NULL,
               dueAmount INT NOT NULL,
-              reservedForHours BOOLEAN DEFAULT TRUE,
-              reservedForDays BOOLEAN DEFAULT FALSE,
+              reservedForHours INT NOT NULL,
               reservedDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              reservedForDate DATE DEFAULT (CURRENT_DATE),
-              reservedForTime TIME DEFAULT (CURRENT_TIME),
               reservationComplete BOOLEAN DEFAULT FALSE,
+              crossedDeadline BOOLEAN DEFAULT FALSE,
+              extendedDuration INT DEFAULT 0,
+              extendedDeadlineCharge INT DEFAULT 6,
+              extendedTimeLineCosts INT DEFAULT 0,
+              finalCostsWithExtension INT DEFAULT 0,
               is_active BOOLEAN DEFAULT TRUE,
               is_deleted BOOLEAN DEFAULT FALSE,
               FOREIGN KEY (bookId) REFERENCES books(id),
@@ -63,27 +65,19 @@ module.exports = {
             )`;
 
       await queryAsync(db, createTableQuery);
-
-      // Insert reservation with fetched hourlyRate and dailyRate
       const insertQuery = `
             INSERT INTO reservations (
-              bookId, userId, chargePerHour, chargePerDay, totalAmount, paidAmount, dueAmount, reservedDate,  reservedForHours, reservedForDays, reservedForDate, reservedForTime, reservationComplete
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+              bookId, userId, chargePerHour, totalAmount, paidAmount, dueAmount, reservedForHours
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
       const values = [
         bookId,
         userId,
-        hourlyRate, // Use hourlyRate from books table
-        dailyRate, // Use dailyRate from books table
+        hourlyRate,
         totalAmount,
         paidAmount,
         dueAmount,
-        reservedForHours,
-        reservedForDays,
-        reservedDate,
-        reservedForDate,
-        reservedForTime || new Date().toISOString().slice(11, 19), // Default to current time if not provided
-        false,
+        reservedDuration,
       ];
 
       const insertResult = await queryAsync(db, insertQuery, values);
