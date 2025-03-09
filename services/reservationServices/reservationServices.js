@@ -6,9 +6,7 @@ module.exports = {
   async createReservationService(body) {
     try {
       const db = await connectToDb();
-
       const { bookId, userId, reservedDuration, paidAmount } = body;
-
       const requiredFields = {
         bookId,
         userId,
@@ -37,7 +35,6 @@ module.exports = {
       }
 
       const { hourlyRate } = bookResult[0];
-
       const totalAmount = hourlyRate * reservedDuration;
       const dueAmount = totalAmount - paidAmount;
 
@@ -52,12 +49,9 @@ module.exports = {
               dueAmount INT NOT NULL,
               reservedForHours INT NOT NULL,
               reservedDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              reservationComplete BOOLEAN DEFAULT FALSE,
+              bookReturned BOOLEAN DEFAULT FALSE,
               crossedDeadline BOOLEAN DEFAULT FALSE,
-              extendedDuration INT DEFAULT 0,
-              extendedDeadlineCharge INT DEFAULT 6,
-              extendedTimeLineCosts INT DEFAULT 0,
-              finalCostsWithExtension INT DEFAULT 0,
+              reservationExtention BOOLEAN DEFAULT FALSE,
               is_active BOOLEAN DEFAULT TRUE,
               is_deleted BOOLEAN DEFAULT FALSE,
               FOREIGN KEY (bookId) REFERENCES books(id),
@@ -69,7 +63,6 @@ module.exports = {
             INSERT INTO reservations (
               bookId, userId, chargePerHour, totalAmount, paidAmount, dueAmount, reservedForHours
             ) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-
       const values = [
         bookId,
         userId,
@@ -81,7 +74,6 @@ module.exports = {
       ];
 
       const insertResult = await queryAsync(db, insertQuery, values);
-
       if (!insertResult.insertId) {
         return {
           status: 400,
@@ -111,7 +103,6 @@ module.exports = {
       };
     }
   },
-
 
   async getAllReservationServices() {
     try {
@@ -190,4 +181,113 @@ module.exports = {
       };
     }
   },
+
+  async updateReservationService(reservationId, body) {
+    try {
+      const db = await connectToDb();
+
+      const checkQuery = "SELECT * FROM reservations WHERE id = ?";
+      const reservation = await queryAsync(db, checkQuery, [reservationId]);
+      if (reservation.length === 0) {
+        return {
+          status: 404,
+          error: true,
+          message: "Reservation not found",
+          data: null,
+        };
+      }
+
+      const validFields = [
+        "bookId",
+        "userId",
+        "chargePerHour",
+        "totalAmount",
+        "paidAmount",
+        "dueAmount",
+        "reservedForHours",
+        "reservedDate",
+        "bookReturned",
+        "crossedDeadline",
+        "reservationExtention",
+      ];
+
+      const updateFields = Object.keys(body).filter((key) =>
+        validFields.includes(key)
+      );
+      if (updateFields.length === 0) {
+        return {
+          status: 400,
+          error: true,
+          message: "No valid fields provided for update",
+          data: null,
+        };
+      }
+
+      // Construct the dynamic update query
+      const updateQuery = `UPDATE reservations SET ${updateFields
+        .map((field) => `${field} = ?`)
+        .join(", ")} WHERE id = ?`;
+
+      const values = [
+        ...updateFields.map((field) => body[field]),
+        reservationId,
+      ];
+      await queryAsync(db, updateQuery, values);
+
+      // Fetch updated reservation
+      const updatedReservation = await queryAsync(db, checkQuery, [
+        reservationId,
+      ]);
+
+      return {
+        status: 200,
+        error: false,
+        message: "Reservation updated successfully",
+        data: updatedReservation[0],
+      };
+    } catch (error) {
+      console.log(error, "Update Reservation Service Failed");
+      return {
+        status: 500,
+        error: true,
+        message: "Update Reservation Service Error",
+      };
+    }
+  },
+
+  async deleteReservationService(reservationId) {
+    try {
+      const db = await connectToDb();
+
+      const checkQuery = "SELECT * FROM reservations WHERE id = ?";
+      const reservation = await queryAsync(db, checkQuery, [reservationId]);
+      if (reservation.length === 0) {
+        return {
+          status: 404,
+          error: true,
+          message: "Reservation not found",
+          data: null,
+        };
+      }
+
+      const updateQuery = "UPDATE reservations SET is_active = ?, is_deleted = ? WHERE id = ?";
+      await queryAsync(db, updateQuery, [false, true, reservationId]);
+
+      const updatedReservation = await queryAsync(db, checkQuery, [reservationId]);
+      return {
+        status: 200,
+        error: false,
+        message: "Reservation deleted successfully",
+        data: updatedReservation[0],
+      };
+    } catch (error) {
+      console.log(error, "Delete Reservation Service Failed");
+      return {
+        status: 500,
+        error: true,
+        message: "Delete Reservation Service Error",
+      };
+    }
+  }
+
 };

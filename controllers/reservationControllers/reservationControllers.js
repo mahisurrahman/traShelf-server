@@ -45,13 +45,50 @@ module.exports = {
 
   async getSignleReservationsControllers(req, res) {
     try {
-      let response = await reservationServices.getSingleReservationService(req.params.id);
+      let response = await reservationServices.getSingleReservationService(
+        req.params.id
+      );
       return res.status(response.status).send(response);
     } catch (error) {
       console.error(error);
       const newError = createErrorMessage();
       newError.data = error;
       newError.message = "Get Single Reservations Controller Error";
+      newError.status = statusCode.internalServerError;
+      newError.error = true;
+      return res.status(newError.status).json(newError);
+    }
+  },
+
+  async updateSingleReservationsControllers(req, res) {
+    try {
+      let response = await reservationServices.updateReservationService(
+        req.params.id,
+        req.body
+      );
+      return res.status(response.status).send(response);
+    } catch (error) {
+      console.error(error);
+      const newError = createErrorMessage();
+      newError.data = error;
+      newError.message = "Update Single Reservations Controller Error";
+      newError.status = statusCode.internalServerError;
+      newError.error = true;
+      return res.status(newError.status).json(newError);
+    }
+  },
+
+  async removeSingleReservationsControllers(req, res) {
+    try {
+      let response = await reservationServices.deleteReservationService(
+        req.params.id
+      );
+      return res.status(response.status).send(response);
+    } catch (error) {
+      console.error(error);
+      const newError = createErrorMessage();
+      newError.data = error;
+      newError.message = "Remove Single Reservations Controller Error";
       newError.status = statusCode.internalServerError;
       newError.error = true;
       return res.status(newError.status).json(newError);
