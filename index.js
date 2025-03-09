@@ -8,6 +8,10 @@ connectToDb()
   .then(() => {
     routermanager();
 
+    app.use("/", (req, res)=>{
+      res.send("Server Running Smoothly");
+    })
+
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
     });

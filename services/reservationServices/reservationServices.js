@@ -21,6 +21,24 @@ module.exports = {
         }
       }
 
+      const checkExistingQuery = `
+        SELECT * FROM reservations 
+        WHERE bookId = ? AND userId = ? 
+        AND DATE(reservedDate) = CURDATE()`;
+      const existingReservations = await queryAsync(db, checkExistingQuery, [
+        bookId,
+        userId,
+      ]);
+
+      if (existingReservations.length > 0) {
+        return {
+          status: 400,
+          error: true,
+          message: "You have already reserved this book today",
+          data: null,
+        };
+      }
+
       // Fetch hourlyRate from the books table
       const bookQuery = "SELECT hourlyRate FROM books WHERE id = ?";
       const bookResult = await queryAsync(db, bookQuery, [bookId]);
@@ -38,27 +56,6 @@ module.exports = {
       const totalAmount = hourlyRate * reservedDuration;
       const dueAmount = totalAmount - paidAmount;
 
-      const createTableQuery = `
-            CREATE TABLE IF NOT EXISTS reservations (
-              id INT AUTO_INCREMENT PRIMARY KEY,
-              bookId INT NOT NULL,
-              userId INT NOT NULL,
-              chargePerHour INT NOT NULL,
-              totalAmount INT NOT NULL,
-              paidAmount INT NOT NULL,
-              dueAmount INT NOT NULL,
-              reservedForHours INT NOT NULL,
-              reservedDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              bookReturned BOOLEAN DEFAULT FALSE,
-              crossedDeadline BOOLEAN DEFAULT FALSE,
-              reservationExtention BOOLEAN DEFAULT FALSE,
-              is_active BOOLEAN DEFAULT TRUE,
-              is_deleted BOOLEAN DEFAULT FALSE,
-              FOREIGN KEY (bookId) REFERENCES books(id),
-              FOREIGN KEY (userId) REFERENCES users(id)
-            )`;
-
-      await queryAsync(db, createTableQuery);
       const insertQuery = `
             INSERT INTO reservations (
               bookId, userId, chargePerHour, totalAmount, paidAmount, dueAmount, reservedForHours
@@ -150,9 +147,9 @@ module.exports = {
   async getSingleReservationService(id) {
     try {
       const db = await connectToDb();
-      const fetchBooksQuery =
+      const fetchReservationsQuery =
         "SELECT * FROM reservations WHERE id =? AND is_active = TRUE";
-      const reservationLists = await queryAsync(db, fetchBooksQuery, [id]);
+      const reservationLists = await queryAsync(db, fetchReservationsQuery, [id]);
 
       if (reservationLists.length === 0) {
         db.end();
@@ -270,10 +267,13 @@ module.exports = {
         };
       }
 
-      const updateQuery = "UPDATE reservations SET is_active = ?, is_deleted = ? WHERE id = ?";
+      const updateQuery =
+        "UPDATE reservations SET is_active = ?, is_deleted = ? WHERE id = ?";
       await queryAsync(db, updateQuery, [false, true, reservationId]);
 
-      const updatedReservation = await queryAsync(db, checkQuery, [reservationId]);
+      const updatedReservation = await queryAsync(db, checkQuery, [
+        reservationId,
+      ]);
       return {
         status: 200,
         error: false,
@@ -288,6 +288,5 @@ module.exports = {
         message: "Delete Reservation Service Error",
       };
     }
-  }
-
+  },
 };
